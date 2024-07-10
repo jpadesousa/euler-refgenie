@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# Function to display help message
+show_help() {
+    echo "Usage: $0 -e ENV_FILE_PATH"
+    echo ""
+    echo "Options:"
+    echo "  -e    Path to the environment file to source"
+    echo "  -h    Display this help message"
+    exit 0
+}
+
+# Parse command-line options
+while getopts ":he:" opt; do
+    case ${opt} in
+        e )
+            ENV_FILE_PATH=$OPTARG
+            ;;
+        h )
+            show_help
+            ;;
+        \? )
+            echo "Invalid option: $OPTARG" 1>&2
+            show_help
+            ;;
+        : )
+            echo "Invalid option: $OPTARG requires an argument" 1>&2
+            show_help
+            ;;
+    esac
+done
+shift $((OPTIND -1))
+
+# Check if environment file path is provided
+if [ -z "${ENV_FILE_PATH}" ]; then
+    echo "Error: Environment file path is required."
+    show_help
+fi
+
+# Load environment
+if [ -f "${ENV_FILE_PATH}" ]; then
+    source "${ENV_FILE_PATH}"
+else
+    echo "Error: Environment file does not exist."
+    exit 1
+fi
+
+#############################################
+# HISAT2_INDEX
+#############################################
+JOB_ID=$(sbatch --mem-per-cpu=10G --time=24:00:00 --cpus-per-task=1 --wrap="refgenie build -R '${GENOME_NAME}/hisat2_index:${TAG}' --tag-description '${TAG_DESCRIPTION}' --genome-description '${GENOME_DESCRIPTION}' --genome '${GENOME_NAME}' --map" | awk '{print $4}')
+
+echo "Submitted job to build hisat2 index with Job ID: $JOB_ID"
+echo "Check job status with 'squeue -u $USER' or 'squeue -j $JOB_ID'"
+echo "Check job output with 'cat slurm-${JOB_ID}.out'"
+echo "After completion, run 'refgenie build --reduce' to finalize the genome build"

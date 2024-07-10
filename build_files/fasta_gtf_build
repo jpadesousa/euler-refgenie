@@ -1,0 +1,136 @@
+#!/bin/bash
+
+# Function to display help message
+show_help() {
+    echo "Usage: $0 -e ENV_FILE_PATH"
+    echo ""
+    echo "Options:"
+    echo "  -e    Path to the environment file to source"
+    echo "  -h    Display this help message"
+    exit 0
+}
+
+# Parse command-line options
+while getopts ":he:" opt; do
+    case ${opt} in
+        e )
+            ENV_FILE_PATH=$OPTARG
+            ;;
+        h )
+            show_help
+            ;;
+        \? )
+            echo "Invalid option: $OPTARG" 1>&2
+            show_help
+            ;;
+        : )
+            echo "Invalid option: $OPTARG requires an argument" 1>&2
+            show_help
+            ;;
+    esac
+done
+shift $((OPTIND -1))
+
+# Check if environment file path is provided
+if [ -z "${ENV_FILE_PATH}" ]; then
+    echo "Error: Environment file path is required."
+    show_help
+fi
+
+# Load environment
+if [ -f "${ENV_FILE_PATH}" ]; then
+    source "${ENV_FILE_PATH}"
+else
+    echo "Error: Environment file does not exist."
+    exit 1
+fi
+
+#############################################
+# Load refgenie and axel
+#############################################
+module load refgenie axel
+
+
+#############################################
+# FASTA
+#############################################
+TEMP_DIR=$(mktemp -d)
+trap "rm -rf ${TEMP_DIR}" EXIT
+FASTA_FILE_PATH="${TEMP_DIR}/${FASTA_FILENAME}"
+axel -o "${FASTA_FILE_PATH}" "${FASTA_FILE}" || { echo "Download failed"; exit 1; }
+
+refgenie build \
+    -R "${GENOME_NAME}/fasta:${TAG}" \
+    --files fasta="${FASTA_FILE_PATH}" \
+    --tag-description "${TAG_DESCRIPTION}" \
+    --genome-description "${GENOME_DESCRIPTION}" \
+    --genome "${GENOME_NAME}"
+
+
+#############################################
+# FASTA_TXOME
+#############################################
+refgenie build \
+    -R "${GENOME_NAME}/fasta_txome:${TAG}" \
+    --files fasta="${FASTA_FILE_PATH}" \
+    --tag-description "${TAG_DESCRIPTION}" \
+    --genome-description "${GENOME_DESCRIPTION}" \
+    --genome "${GENOME_NAME}"
+
+
+#############################################
+# ENSEMBL_GTF
+#############################################
+TEMP_DIR=$(mktemp -d)
+trap "rm -rf ${TEMP_DIR}" EXIT
+ENSEMBL_GTF_FILE_PATH="${TEMP_DIR}/${ENSEMBL_GTF_FILENAME}"
+axel -o "${ENSEMBL_GTF_FILE_PATH}" "${ENSEMBL_GTF_FILE}" || { echo "Download failed"; exit 1; }
+
+refgenie build \
+    -R "${GENOME_NAME}/ensembl_gtf:${TAG}" \
+    --files ensembl_gtf="${ENSEMBL_GTF_FILE_PATH}" \
+    --tag-description "${TAG_DESCRIPTION}" \
+    --genome-description "${GENOME_DESCRIPTION}" \
+    --genome "${GENOME_NAME}"
+
+
+#############################################
+# ENSEMBL_RB
+#############################################
+if [ -n "${ENSEMBL_GFF_FILE}" ] && [ -n "${ENSEMBL_GFF_FILENAME}" ]; then
+    TEMP_DIR=$(mktemp -d)
+    trap "rm -rf ${TEMP_DIR}" EXIT
+    ENSEMBL_GFF_FILE_PATH="${TEMP_DIR}/${ENSEMBL_GFF_FILENAME}"
+    axel -o "${ENSEMBL_GFF_FILE_PATH}" "${ENSEMBL_GFF_FILE}" || { echo "Download failed"; exit 1; }
+
+    refgenie build \
+        -R "${GENOME_NAME}/ensembl_rb:${TAG}" \
+        --files gff="${ENSEMBL_GFF_FILE_PATH}" \
+        --tag-description "${TAG_DESCRIPTION}" \
+        --genome-description "${GENOME_DESCRIPTION}" \
+        --genome "${GENOME_NAME}"
+else
+    echo "Skipping ENSEMBL GFF download and build due to missing ENSEMBL_GFF_FILE or ENSEMBL_GFF_FILENAME."
+fi
+
+
+#############################################
+# BLACKLIST
+#############################################
+if [ -n "${BLACKLIST_FILE}" ] && [ -n "${BLACKLIST_FILE_FILENAME}" ]; then
+    TEMP_DIR=$(mktemp -d)
+    trap "rm -rf ${TEMP_DIR}" EXIT
+    BLACKLIST_FILE_PATH="${TEMP_DIR}/${BLACKLIST_FILE_FILENAME}"
+    axel -o "${BLACKLIST_FILE_PATH}" "${BLACKLIST_FILE}" || { echo "Download failed"; exit 1; }
+
+    refgenie build \
+        -R "${GENOME_NAME}/blacklist:${TAG}" \
+        --files blacklist="${BLACKLIST_FILE_PATH}" \
+        --tag-description "${TAG_DESCRIPTION}" \
+        --genome-description "${GENOME_DESCRIPTION}" \
+        --genome "${GENOME_NAME}"
+else
+    echo "Skipping blacklist download and build due to missing BLACKLIST_FILE or BLACKLIST_FILE_FILENAME."
+fi
+
+exit 0
