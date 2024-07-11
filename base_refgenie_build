@@ -118,10 +118,16 @@ fi
 # BLACKLIST
 #############################################
 if [ -n "${BLACKLIST_FILE}" ] && [ -n "${BLACKLIST_FILENAME}" ]; then
-    TEMP_DIR=$(mktemp -d)
-    trap "rm -rf ${TEMP_DIR}" EXIT
-    BLACKLIST_FILE_PATH="${TEMP_DIR}/${BLACKLIST_FILENAME}"
-    wget -O "${BLACKLIST_FILE_PATH}" "${BLACKLIST_FILE}" || { echo "Download failed"; exit 1; }
+    if [ -d "${BLACKLIST_FILE}" ]; then
+        # If BLACKLIST_FILE is a directory, use the file from this directory
+        BLACKLIST_FILE_PATH="${BLACKLIST_FILE}"
+    else
+        # If BLACKLIST_FILE is not a directory, assume it's a link and download the file
+        TEMP_DIR=$(mktemp -d)
+        trap "rm -rf ${TEMP_DIR}" EXIT
+        BLACKLIST_FILE_PATH="${TEMP_DIR}/${BLACKLIST_FILENAME}"
+        wget -O "${BLACKLIST_FILE_PATH}" "${BLACKLIST_FILE}" || { echo "Download failed"; exit 1; }
+    fi
 
     refgenie build \
         -R "${GENOME_NAME}/blacklist:${TAG}" \
