@@ -46,11 +46,11 @@ else
 fi
 
 #############################################
-# BISMARK_BT2_INDEX
+# SALMON_INDEX
 #############################################
-JOB_ID=$(sbatch --mem-per-cpu=10G --time=24:00:00 --cpus-per-task=1 --wrap="refgenie build -R '${GENOME_NAME}/bismark_bt2_index:${TAG}' --tag-description '${TAG_DESCRIPTION}' --genome-description '${GENOME_DESCRIPTION}' --genome '${GENOME_NAME}' --map" | awk '{print $4}')
+JOB_ID=$(sbatch --mem-per-cpu=5G --time=24:00:00 --cpus-per-task=10 --wrap="refgenie build -R '${GENOME_NAME}/salmon_index:${TAG}' --tag-description '${TAG_DESCRIPTION}' --genome-description '${GENOME_DESCRIPTION}' --genome '${GENOME_NAME}' --params threads=10 --map" | awk '{print $4}')
 
-echo "Submitted job to build Bismark bt2 index with Job ID: $JOB_ID"
+echo "Submitted job to build salmon index with Job ID: $JOB_ID"
 echo "Check job status with 'squeue -u $USER' or 'squeue -j $JOB_ID'"
 echo "Check job output with 'cat slurm-${JOB_ID}.out'"
 echo "After completion, run 'refgenie build --reduce' to finalize the genome build"

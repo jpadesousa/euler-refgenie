@@ -117,11 +117,33 @@ fi
 #############################################
 # BLACKLIST
 #############################################
-if [ -n "${BLACKLIST_FILE}" ] && [ -n "${BLACKLIST_FILE_FILENAME}" ]; then
+if [ -n "${BLACKLIST_FILE}" ] && [ -n "${BLACKLIST_FILENAME}" ]; then
     TEMP_DIR=$(mktemp -d)
     trap "rm -rf ${TEMP_DIR}" EXIT
-    BLACKLIST_FILE_PATH="${TEMP_DIR}/${BLACKLIST_FILE_FILENAME}"
-    axel -o "${BLACKLIST_FILE_PATH}" "${BLACKLIST_FILE}" || { echo "Download failed"; exit 1; }
+    BLACKLIST_FILE_PATH="${TEMP_DIR}/${BLACKLIST_FILENAME}"
+    wget -O "${BLACKLIST_FILE_PATH}" "${BLACKLIST_FILE}" || { echo "Download failed"; exit 1; }
+
+    # Check if the file is compressed and decompress it
+    FILE_TYPE=$(file --brief "${BLACKLIST_FILE_PATH}")
+    case "${FILE_TYPE}" in
+        *gzip*)
+            gunzip "${BLACKLIST_FILE_PATH}"
+            BLACKLIST_FILE_PATH="${BLACKLIST_FILE_PATH%.*}"
+            ;;
+        *bzip2*)
+            bunzip2 "${BLACKLIST_FILE_PATH}"
+            BLACKLIST_FILE_PATH="${BLACKLIST_FILE_PATH%.*}"
+            ;;
+        *zip*)
+            UNZIP_DIR="${TEMP_DIR}/unzip"
+            mkdir -p "${UNZIP_DIR}"
+            unzip "${BLACKLIST_FILE_PATH}" -d "${UNZIP_DIR}"
+            BLACKLIST_FILE_PATH=$(find "${UNZIP_DIR}" -type f | head -n 1)
+            ;;
+        *)
+            echo "File is not compressed or compression format is not supported."
+            ;;
+    esac
 
     refgenie build \
         -R "${GENOME_NAME}/blacklist:${TAG}" \
@@ -130,7 +152,7 @@ if [ -n "${BLACKLIST_FILE}" ] && [ -n "${BLACKLIST_FILE_FILENAME}" ]; then
         --genome-description "${GENOME_DESCRIPTION}" \
         --genome "${GENOME_NAME}"
 else
-    echo "Skipping blacklist download and build due to missing BLACKLIST_FILE or BLACKLIST_FILE_FILENAME."
+    echo "Skipping blacklist download and build due to missing BLACKLIST_FILE or BLACKLIST_FILENAME."
 fi
 
 exit 0
