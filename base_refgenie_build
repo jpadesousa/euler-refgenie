@@ -118,11 +118,11 @@ fi
 # BLACKLIST
 #############################################
 if [ -n "${BLACKLIST_FILE}" ] && [ -n "${BLACKLIST_FILENAME}" ]; then
-    if [ -d "${BLACKLIST_FILE}" ]; then
-        # If BLACKLIST_FILE is a directory, use the file from this directory
+    if [ -f "${BLACKLIST_FILE}" ]; then
+        # If BLACKLIST_FILE is a file, use it directly
         BLACKLIST_FILE_PATH="${BLACKLIST_FILE}"
     else
-        # If BLACKLIST_FILE is not a directory, assume it's a link and download the file
+        # If BLACKLIST_FILE is not a file, assume it's a link and download the file
         TEMP_DIR=$(mktemp -d)
         trap "rm -rf ${TEMP_DIR}" EXIT
         BLACKLIST_FILE_PATH="${TEMP_DIR}/${BLACKLIST_FILENAME}"
