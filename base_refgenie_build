@@ -50,14 +50,22 @@ fi
 #############################################
 module load refgenie axel
 
-
 #############################################
 # FASTA
 #############################################
-TEMP_DIR=$(mktemp -d)
-trap "rm -rf ${TEMP_DIR}" EXIT
-FASTA_FILE_PATH="${TEMP_DIR}/${FASTA_FILENAME}"
-axel -o "${FASTA_FILE_PATH}" "${FASTA_FILE}" || { echo "Download failed"; exit 1; }
+if [ -z "${FASTA_FILE}" ] || [ -z "${FASTA_FILENAME}" ]; then
+    echo "Both FASTA_FILE and FASTA_FILENAME are required."
+    exit 1
+fi
+
+if [ -f "${FASTA_FILE}" ]; then
+    FASTA_FILE_PATH="${FASTA_FILE}"
+else
+    TEMP_DIR=$(mktemp -d)
+    trap "rm -rf ${TEMP_DIR}" EXIT
+    FASTA_FILE_PATH="${TEMP_DIR}/${FASTA_FILENAME}"
+    axel -o "${FASTA_FILE_PATH}" "${FASTA_FILE}" || { echo "Download failed"; exit 1; }
+fi
 
 refgenie build \
     -R "${GENOME_NAME}/fasta:${TAG}" \
@@ -65,7 +73,6 @@ refgenie build \
     --tag-description "${TAG_DESCRIPTION}" \
     --genome-description "${GENOME_DESCRIPTION}" \
     --genome "${GENOME_NAME}"
-
 
 #############################################
 # FASTA_TXOME
@@ -77,31 +84,41 @@ refgenie build \
     --genome-description "${GENOME_DESCRIPTION}" \
     --genome "${GENOME_NAME}"
 
-
 #############################################
 # ENSEMBL_GTF
 #############################################
-TEMP_DIR=$(mktemp -d)
-trap "rm -rf ${TEMP_DIR}" EXIT
-ENSEMBL_GTF_FILE_PATH="${TEMP_DIR}/${ENSEMBL_GTF_FILENAME}"
-axel -o "${ENSEMBL_GTF_FILE_PATH}" "${ENSEMBL_GTF_FILE}" || { echo "Download failed"; exit 1; }
+if [ -n "${ENSEMBL_GTF_FILE}" ] && [ -n "${ENSEMBL_GTF_FILENAME}" ]; then
+    if [ -f "${ENSEMBL_GTF_FILE}" ]; then
+        ENSEMBL_GTF_FILE_PATH="${ENSEMBL_GTF_FILE}"
+    else
+        TEMP_DIR=$(mktemp -d)
+        trap "rm -rf ${TEMP_DIR}" EXIT
+        ENSEMBL_GTF_FILE_PATH="${TEMP_DIR}/${ENSEMBL_GTF_FILENAME}"
+        axel -o "${ENSEMBL_GTF_FILE_PATH}" "${ENSEMBL_GTF_FILE}" || { echo "Download failed"; exit 1; }
+    fi
 
-refgenie build \
-    -R "${GENOME_NAME}/ensembl_gtf:${TAG}" \
-    --files ensembl_gtf="${ENSEMBL_GTF_FILE_PATH}" \
-    --tag-description "${TAG_DESCRIPTION}" \
-    --genome-description "${GENOME_DESCRIPTION}" \
-    --genome "${GENOME_NAME}"
-
+    refgenie build \
+        -R "${GENOME_NAME}/ensembl_gtf:${TAG}" \
+        --files ensembl_gtf="${ENSEMBL_GTF_FILE_PATH}" \
+        --tag-description "${TAG_DESCRIPTION}" \
+        --genome-description "${GENOME_DESCRIPTION}" \
+        --genome "${GENOME_NAME}"
+else
+    echo "Skipping Ensembl gtf download and build due to missing ENSEMBL_GTF_FILE or ENSEMBL_GTF_FILENAME."
+fi
 
 #############################################
 # ENSEMBL_RB
 #############################################
 if [ -n "${ENSEMBL_GFF_FILE}" ] && [ -n "${ENSEMBL_GFF_FILENAME}" ]; then
-    TEMP_DIR=$(mktemp -d)
-    trap "rm -rf ${TEMP_DIR}" EXIT
-    ENSEMBL_GFF_FILE_PATH="${TEMP_DIR}/${ENSEMBL_GFF_FILENAME}"
-    axel -o "${ENSEMBL_GFF_FILE_PATH}" "${ENSEMBL_GFF_FILE}" || { echo "Download failed"; exit 1; }
+    if [ -f "${ENSEMBL_GFF_FILE}" ]; then
+        ENSEMBL_GFF_FILE_PATH="${ENSEMBL_GFF_FILE}"
+    else
+        TEMP_DIR=$(mktemp -d)
+        trap "rm -rf ${TEMP_DIR}" EXIT
+        ENSEMBL_GFF_FILE_PATH="${TEMP_DIR}/${ENSEMBL_GFF_FILENAME}"
+        axel -o "${ENSEMBL_GFF_FILE_PATH}" "${ENSEMBL_GFF_FILE}" || { echo "Download failed"; exit 1; }
+    fi
 
     refgenie build \
         -R "${GENOME_NAME}/ensembl_rb:${TAG}" \
@@ -110,19 +127,16 @@ if [ -n "${ENSEMBL_GFF_FILE}" ] && [ -n "${ENSEMBL_GFF_FILENAME}" ]; then
         --genome-description "${GENOME_DESCRIPTION}" \
         --genome "${GENOME_NAME}"
 else
-    echo "Skipping ENSEMBL GFF download and build due to missing ENSEMBL_GFF_FILE or ENSEMBL_GFF_FILENAME."
+    echo "Skipping Ensembl gff download and build due to missing ENSEMBL_GFF_FILE or ENSEMBL_GFF_FILENAME."
 fi
-
 
 #############################################
 # BLACKLIST
 #############################################
 if [ -n "${BLACKLIST_FILE}" ] && [ -n "${BLACKLIST_FILENAME}" ]; then
     if [ -f "${BLACKLIST_FILE}" ]; then
-        # If BLACKLIST_FILE is a file, use it directly
         BLACKLIST_FILE_PATH="${BLACKLIST_FILE}"
     else
-        # If BLACKLIST_FILE is not a file, assume it's a link and download the file
         TEMP_DIR=$(mktemp -d)
         trap "rm -rf ${TEMP_DIR}" EXIT
         BLACKLIST_FILE_PATH="${TEMP_DIR}/${BLACKLIST_FILENAME}"

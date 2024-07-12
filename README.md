@@ -41,6 +41,8 @@ export BLACKLIST_FILE="https://www.encodeproject.org/files/ENCFF356LFX/@@downloa
 
 Note: The blacklist and GFF variables are optional.
 
+The files can be links to download or local files already downloaded.
+
 ### Step 2: Build the Assets
 
 To create assets such as `fasta`, `fasta_txome`, `ensembl_gtf`, `ensembl_rb`, and `blacklist`, run:
