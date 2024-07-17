@@ -1,0 +1,90 @@
+#!/bin/bash
+
+# Function to display help message
+show_help() {
+    echo "Usage: $0 -e ENV_FILE_PATH"
+    echo ""
+    echo "Options:"
+    echo "  -e    Path to the environment file to source"
+    echo "  -h    Display this help message"
+    exit 0
+}
+
+# Parse command-line options
+while getopts ":he:" opt; do
+    case ${opt} in
+        e )
+            ENV_FILE_PATH=$OPTARG
+            ;;
+        h )
+            show_help
+            ;;
+        \? )
+            echo "Invalid option: $OPTARG" 1>&2
+            show_help
+            ;;
+        : )
+            echo "Invalid option: $OPTARG requires an argument" 1>&2
+            show_help
+            ;;
+    esac
+done
+shift $((OPTIND -1))
+
+# Check if environment file path is provided
+if [ -z "${ENV_FILE_PATH}" ]; then
+    echo "Error: Environment file path is required."
+    show_help
+fi
+
+# Load environment
+if [ -f "${ENV_FILE_PATH}" ]; then
+    source "${ENV_FILE_PATH}"
+else
+    echo "Error: Environment file does not exist."
+    exit 1
+fi
+
+# Define base URL
+base_url="https://ftp.ensembl.org/pub/release-${ENSEMBL_RELEASE}/fasta/${SPECIES}/dna/"
+
+# Define the filename prefix
+FASTA_FILENAME_PREFIX=${FASTA_FILENAME%.fa.gz}
+
+# List of chromosomes or parts to download
+declare -a parts=("${CHROMOSOMES[@]}")
+
+# Loop through each part and download it
+for part in "${parts[@]}"; do
+    wget "${base_url}${FASTA_FILENAME_PREFIX}.${part}.fa.gz"
+done
+
+# Create a temporary directory for decompressed files
+temp_dir=$(mktemp -d)
+trap "rm -rf ${temp_dir}" EXIT
+
+# Decompress each part into the temporary directory and concatenate
+for part in "${parts[@]}"; do
+    gzip -cd "${FASTA_FILENAME_PREFIX}.${part}.fa.gz" >> "${temp_dir}/${FASTA_FILENAME_PREFIX}.fa"
+done
+
+# Recompress the concatenated file
+gzip "${temp_dir}/${FASTA_FILENAME_PREFIX}.fa"
+
+# Move the final compressed file back to the current directory
+mv "${temp_dir}/${FASTA_FILENAME_PREFIX}.fa.gz" .
+
+# Clean up downloaded parts
+for part in "${parts[@]}"; do
+    rm -f "${FASTA_FILENAME_PREFIX}.${part}.fa.gz"
+done
+
+# Verify if all chromosomes are present in the final file
+echo "Verifying chromosomes in the concatenated file:"
+for part in "${parts[@]}"; do
+    if ! zgrep -q ">${part} " "${FASTA_FILENAME_PREFIX}.fa.gz"; then
+        echo "Chromosome ${part} is missing."
+    else
+        echo "Chromosome ${part} is present."
+    fi
+done

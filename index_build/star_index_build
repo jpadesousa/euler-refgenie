@@ -48,7 +48,7 @@ fi
 #############################################
 # STAR_INDEX
 #############################################
-JOB_ID=$(sbatch --mem-per-cpu=5G --time=24:00:00 --cpus-per-task=10 --wrap="refgenie build -R '${GENOME_NAME}/star_index:${TAG}' --tag-description '${TAG_DESCRIPTION}' --genome-description '${GENOME_DESCRIPTION}' --genome '${GENOME_NAME}' --params threads=10 --map" | awk '{print $4}')
+JOB_ID=$(sbatch --mem-per-cpu=5G --time=04:00:00 --cpus-per-task=10 --wrap="refgenie build -R '${GENOME_NAME}/star_index:${TAG}' --tag-description '${TAG_DESCRIPTION}' --genome-description '${GENOME_DESCRIPTION}' --genome '${GENOME_NAME}' --params threads=10 --map" | awk '{print $4}')
 
 echo "Submitted job to build star index with Job ID: $JOB_ID"
 echo "Check job status with 'squeue -u $USER' or 'squeue -j $JOB_ID'"

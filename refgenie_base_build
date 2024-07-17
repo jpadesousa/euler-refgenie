@@ -143,6 +143,11 @@ if [ -n "${BLACKLIST_FILE}" ] && [ -n "${BLACKLIST_FILENAME}" ]; then
         wget -O "${BLACKLIST_FILE_PATH}" "${BLACKLIST_FILE}" || { echo "Download failed"; exit 1; }
     fi
 
+    if [[ "${BLACKLIST_FILE_PATH}" != *.gz ]]; then
+        gzip "${BLACKLIST_FILE_PATH}"
+        BLACKLIST_FILE_PATH="${BLACKLIST_FILE_PATH}.gz"
+    fi
+
     refgenie build \
         -R "${GENOME_NAME}/blacklist:${TAG}" \
         --files blacklist="${BLACKLIST_FILE_PATH}" \

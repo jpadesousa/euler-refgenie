@@ -48,7 +48,7 @@ The files can be links to download or local files already downloaded.
 To create assets such as `fasta`, `fasta_txome`, `ensembl_gtf`, `ensembl_rb`, and `blacklist`, run:
 
 ```bash
-base_refgenie_build -e <path to your environment file>
+refgenie_base_build -e <path to your environment file>
 ```
 
 ### Step 3: Index Building
